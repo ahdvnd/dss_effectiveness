@@ -5,25 +5,32 @@
 # col=c("gray86", "gray49")
 
 
+raincloud_theme = theme(
+    text = element_text(size = 10),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    axis.text.x = element_text(angle = 45, vjust = 0.5),
+    legend.title=element_text(size=16),
+    legend.text=element_text(size=16),
+    legend.position = "right",
+    plot.title = element_text(lineheight=.8, face="bold", size = 16),
+    panel.border = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.line.x = element_line(colour = 'black', size=0.5, linetype='solid'),
+    axis.line.y = element_line(colour = 'black', size=0.5, linetype='solid'))
+
+
+
 
 par(family = "serif")
 source("code/main_analysis.R")
 library(RColorBrewer)
 
-## science graph 1 panel B
-ggsave("demog.pdf", plot=demog.graph, device = NULL, path = NULL,
-       scale = 1, width = 8, height = 4.5, units = c("in"),
-       dpi = 300, limitsize = TRUE)
-
-## Science graph 2
-ggsave("gh.pdf", plot=grid.arrange(d2, contplot, roiplot, ncol=3, widths = c(1/3, 1/3, 1/3)), device = NULL, path = NULL,
-       scale = 1, width = 12, height = 4, units = c("in"),
-       dpi = 300, limitsize = TRUE)
-
 
 # Demographics ------------------
 ## -----------------------------------------
-
 demog <- data.frame(
     all_cats = c("Female", "Female", 
                  "Age: 21-40", "Age: 21-40", 
@@ -115,7 +122,10 @@ s2 <- ggplot(demog_crsra, aes(x=all_cats, y=prop, fill=group)) +
 
 demog.graph <- grid.arrange(s1, s2, ncol=2, widths = c(2/3, 1/3))
 
-
+# figure 1 in paper
+ggsave("graphs/comparison.pdf", plot=demog.graph, device = NULL, path = NULL,
+       scale = 1, width = 8, height = 4.5, units = c("in"),
+       dpi = 300, limitsize = TRUE)
 
 
 # violin plot --------------------------------------------------------
@@ -128,9 +138,9 @@ demog.graph <- grid.arrange(s1, s2, ncol=2, widths = c(2/3, 1/3))
 #     scale_fill_manual(values=c("#E69F00", "#56B4E9")) + theme_classic() + guides(fill=FALSE) +
 #     theme(axis.text=element_text(size=10)) + ylim(-30000, 200000)
 
-
+source("code/raw_code/geom_flat_violin.R")
 d1 <- ggplot(ctry_cutoff_minmax(cutoff = cutoff, cutoff1 = cutoff1, cutoff2 = cutoff2, nn = 10), aes(x=pass.group, y= new.income.num/1000, fill = pass.group)) +
-    geom_violin(trim=FALSE, alpha=0.7)+
+    geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .7, trim = FALSE) +
     geom_boxplot(width=0.1, fill=c("#E69F00", "#56B4E9", "springgreen3"), alpha=0.7)+
     labs(x="Different treatment groups", y = "Post-graduation income (thousand $)") +
     scale_fill_manual(values=c("#E69F00", "#56B4E9", "springgreen3")) + theme_classic() + #+ guides(fill=FALSE) +
@@ -144,8 +154,6 @@ d1 <- ggplot(ctry_cutoff_minmax(cutoff = cutoff, cutoff1 = cutoff1, cutoff2 = cu
           legend.background = element_rect(fill=alpha('white', 0.4)),
           panel.grid.major.y = element_line( size=.1, color="grey"))
     
-
-
 #d <- ctry_cutoff_weighted(cutoff = 50, cutoff1 = 30, cutoff2 = 60, nn = 10)
 ## weithed model
 d <- prop_wt_out %>% 
@@ -156,11 +164,11 @@ d <- prop_wt_out %>%
 sampled_rows <- sample(1:NROW(d), size = NROW(d), prob = softmax(d$atm), replace = TRUE)
 wd <- d[sampled_rows, ]
 d2 <- ggplot(wd, aes(x=`Passing Group`, y= new.income.num/1000, fill = `Passing Group`)) +
-    geom_violin(trim=FALSE, alpha=0.7)+
+    geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .7, trim = FALSE) +
     geom_boxplot(width=0.1, fill=c("#E69F00", "#56B4E9", "springgreen3"), alpha=0.7)+
     labs(x="Different treatment groups (weighted sample)", y = "Post-DSS income (thousand $)") +
     scale_fill_manual(values=c("#E69F00", "#56B4E9", "springgreen3")) + theme_classic() + #+ guides(fill=FALSE) +
-    labs(caption="Panel (A)") +
+    #labs(caption="Panel (B)") +
     theme(axis.text.x=element_blank(),
           axis.text.y=element_text(size=10),
           plot.caption = element_text(hjust=0.5, size=rel(1)),
@@ -170,8 +178,12 @@ d2 <- ggplot(wd, aes(x=`Passing Group`, y= new.income.num/1000, fill = `Passing 
           panel.grid.major.y = element_line( size=.1, color="grey"))
 
 
-grid.arrange(d1, d2, ncol=2)
+violin <- grid.arrange(d1, d2, ncol=2)
+ggsave("graphs/violin.pdf", plot=d2, device = NULL, path = NULL,
+       scale = 1, width = 5, height = 4, units = c("in"),
+       dpi = 300, limitsize = TRUE)
 
+# grid.arrange(d2, contplot, roiplot, ncol=3, widths = c(1/3, 1/3, 1/3))
 
 ## plot of the effect of continuous treatment after using causaldrf and hi_model
 # --------------------------------
@@ -205,6 +217,11 @@ contplot <- ggplot(data=p, aes(x=pct_completed/10, y=pct_increase_income))+
     theme(text = element_text(size=11),
           plot.caption = element_text(hjust=0.5, size=rel(1)))
     #annotate(geom="text", x=20, y=10, label="Linear coefficient = 0.8%", color="black")
+
+ggsave("graphs/income_increase.pdf", plot=contplot, device = NULL, path = NULL,
+       scale = 1, width = 4, height = 4, units = c("in"),
+       dpi = 300, limitsize = TRUE)
+
 
 ################# Motivation dumble bar #########################
 
@@ -274,6 +291,12 @@ roiplot <- ggplot(roi, aes(x=cost, y=return)) +
                   labels = trans_format("log10", math_format(10^.x)),
                   limits = c(100, 100000)) +
     annotation_logticks() 
+
+ggsave("graphs/roi.pdf", plot=roiplot, device = NULL, path = NULL,
+       scale = 1, width = 4, height = 4, units = c("in"),
+       dpi = 300, limitsize = TRUE)
+
+
 
 
 ## scatter plot countries ----------------------------------------------------
@@ -467,7 +490,7 @@ grid.arrange(mot, men, ncol=2)
 
 # first run the model in the main_analysis.R file
 dfd <- broom::augment(model)
-ggplot(dfd, aes(x = .fitted, y = .resid)) + 
+residuals <- ggplot(dfd, aes(x = .fitted, y = .resid)) + 
     geom_point(color="bisque3") + 
     geom_smooth() + #method = "lm"
     theme_light() +
@@ -479,6 +502,10 @@ ggplot(dfd, aes(x = .fitted, y = .resid)) +
     scale_x_continuous(labels = dollar) +
     scale_y_continuous(labels = dollar)
 
+
+ggsave("graphs/residuals.pdf", plot=residuals, device = NULL, path = NULL,
+       scale = 1, width = 6, height = 4, units = c("in"),
+       dpi = 300, limitsize = TRUE)
 
 ## package WeightIt ----------------------------------
 ## balance of propensity score
@@ -512,7 +539,7 @@ summary(W.out)
 #                    country +
 #                    white, design = d.w))
 
-bal.plot(W.out, var.name = "prop.score", which = "both") +
+distributions <- bal.plot(W.out, var.name = "prop.score", which = "both") +
     theme_light() +
     xlab("Propensity score") +
     ylab("Density") +
@@ -525,24 +552,24 @@ bal.plot(W.out, var.name = "prop.score", which = "both") +
           legend.position=c(1,1),
           legend.background = element_rect(fill=alpha('white', 0.4)))
 
-
-
-
-
-
-
+ggsave("graphs/distributions.pdf", plot=distributions, device = NULL, path = NULL,
+       scale = 1, width = 8, height = 4, units = c("in"),
+       dpi = 300, limitsize = TRUE)
 
 
 ## covariate balance ------------------------------
 # https://cran.r-project.org/web/packages/cobalt/vignettes/cobalt_A0_basic_use.html
 
-love.plot(bal.tab(W.out), threshold = .1, abs = TRUE, which.treat = NULL)
+covbalance <- love.plot(bal.tab(W.out), threshold = .1, abs = TRUE, which.treat = NULL)
+
+ggsave("graphs/covbalance.pdf", plot=covbalance, device = NULL, path = NULL,
+       scale = 1, width = 8, height = 6, units = c("in"),
+       dpi = 300, limitsize = TRUE)
 
 
 
-
-
-ggplot() + 
+# Histogram of continuous and binary completion
+hist <- ggplot() + 
     geom_density(aes(x=clean.progress.matching$passed, fill = "Binary Completion"), binwidth = 1, alpha = 0.4) + 
     geom_density(aes(x=clean.progress.matching$cont.passed, fill = "Non-binary Completion"), binwidth = 1, alpha = 0.4) +
     xlim(c(-10, 100)) +
@@ -556,7 +583,9 @@ ggplot() +
           legend.background = element_rect(fill=alpha('white', 0.4))) +
     scale_fill_manual("Passing variable",values = c("#999999","#E69F00"))
 
-#
+ggsave("graphs/hist.pdf", plot=hist, device = NULL, path = NULL,
+       scale = 1, width = 6, height = 4, units = c("in"),
+       dpi = 300, limitsize = TRUE)
 
 
 # passed_courses_hist ----------------------------
